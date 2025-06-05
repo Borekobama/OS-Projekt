@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All Logs (Enlarged View)</title>
+
+  <!-- Google Font -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Reuse the same stylesheet so colors match -->
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Override for full‐screen log view */
+    body, html {
+      height: 100%;
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: 'Roboto', sans-serif;
+    }
+    #big-log-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    #big-log-header {
+      background: #111;
+      padding: 12px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #fff;
+      border-bottom: 1px solid #444;
+    }
+    #big-log-output {
+      flex: 1;
+      overflow-y: auto;
+      background-color: #000;
+      padding: 10px;
+      font-family: Consolas, monospace;
+      font-size: 1rem;
+    }
+    /* Reuse the same .log-error/.log-warning/.log-info classes */
+  </style>
+</head>
+<body>
+  <div id="big-log-container">
+    <div id="big-log-header">
+      Live Logs (Enlarged View)
+    </div>
+    <div id="big-log-output" class="log-container"></div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    // ========== Live Log Viewer for /logs ==========
+    const bigLogOutput = document.getElementById('big-log-output');
+
+    // Same helper as before:
+    function appendBigLog(lineText, severity = 'info') {
+      const entry = document.createElement('div');
+      entry.classList.add(`log-${severity}`);
+      entry.textContent = lineText;
+      bigLogOutput.appendChild(entry);
+      bigLogOutput.scrollTop = bigLogOutput.scrollHeight;
+    }
+
+    function formatAndAppendBigLog(text) {
+      // Strip ISO‐date prefix
+      const stripped = text.replace(/^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\]\s*/, '');
+      const lower = stripped.toLowerCase();
+      let severity = 'info';
+      if (lower.includes('error') || lower.includes('disconnected')) {
+        severity = 'error';
+      } else if (lower.includes('waiting') || lower.includes('retry') || lower.includes('left')) {
+        severity = 'warning';
+      }
+      const m = stripped.match(/Worker\s+([^\s]+)/i);
+      let workerTag = '';
+      if (m && m[1]) {
+        workerTag = `[${m[1]}] `;
+      }
+      const now = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      const lineText = `[${now}] ${workerTag}${stripped}`;
+      appendBigLog(lineText, severity);
+    }
+
+    // Initialize WebSocket
+    const socket = io();
+    socket.on('connect', () => {
+      appendBigLog(`WebSocket connected: ${socket.id}`, 'info');
+    });
+    socket.on('log_update', (text) => {
+      formatAndAppendBigLog(text);
+    });
+    socket.on('disconnect', () => {
+      appendBigLog(`WebSocket disconnected`, 'error');
+    });
+  </script>
+</body>
+</html>

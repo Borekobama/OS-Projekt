@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Distributed Odd-Even Sort Demo</title>
+
+  <!-- Google Font -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+
+    <!-- Main diagram area -->
+    <div id="diagram-container">
+      <svg id="connections"></svg>
+      <div id="center" class="node">
+        <div class="node-circle center-circle">
+          <img src="computer.png" alt="Center" />
+        </div>
+        <div class="node-label">Center</div>
+      </div>
+      <div id="workers-container"></div>
+    </div>
+
+    <!-- Control panel -->
+    <div id="control-panel">
+      <h2>Administrator Panel</h2>
+
+      <!-- (A) Algorithm selector -->
+      <div class="panel-section">
+        <label for="algorithm-select"><strong>Algorithm:</strong></label>
+        <select id="algorithm-select">
+          <option value="">(loading…)</option>
+        </select>
+      </div>
+
+      <!-- (B) Array length input -->
+      <div class="panel-section">
+        <label for="array-length"><strong>Array Length:</strong></label>
+        <input type="number" id="array-length" min="1" value="1000" />
+      </div>
+
+      <!-- (C) Start button -->
+      <div class="panel-section">
+        <button id="start-sort-btn" class="btn">Start Sorting</button>
+      </div>
+
+      <hr />
+
+      <!-- (D) Choose Coordinator dropdown -->
+      <div class="panel-section">
+        <label for="coordinator-select"><strong>Choose Coordinator:</strong></label>
+        <select id="coordinator-select">
+          <option value="">(none)</option>
+        </select>
+      </div>
+
+      <!-- (E) Add Worker button -->
+      <div class="panel-section">
+        <button id="add-worker-btn" class="btn">Add Worker</button>
+      </div>
+
+      <!-- (F) Worker list -->
+      <div id="workers-list"></div>
+
+      <hr />
+
+      <!-- (G) Log Viewer -->
+      <div class="panel-section">
+        <label>
+          <input type="checkbox" id="toggle-logs" />
+          Show Logs
+        </label>
+      </div>
+      <div id="log-container" style="display: none;">
+        <!-- Replaced textarea with a scrollable div -->
+        <div id="log-output" class="log-container"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Socket.io client library -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <!-- Main JavaScript (always placed at end of body!) -->
+  <script src="script.js"></script>
+</body>
+</html>

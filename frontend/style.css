@@ -1,0 +1,259 @@
+/* Reset & base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body {
+  height: 100%;
+  font-family: 'Roboto', sans-serif;
+  background-color: #ffffff;
+  color: #333333;
+}
+
+/* Container layout: diagram on left, control panel on right */
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Diagram area */
+#diagram-container {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #f9f9f9;
+}
+
+/* SVG sits on top for lines */
+#connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Generic node (both center slot and worker nodes) */
+.node {
+  position: absolute;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.node-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid #555;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.node-circle img {
+  width: 36px;
+  height: 36px;
+}
+
+.node-label {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #222;
+}
+
+/* “Center” slot styling (when empty) */
+.center-circle {
+  border-color: #999999;
+}
+
+.center-circle.coordinator {
+  border-color: #28a745;
+}
+
+/* Worker-specific class */
+.worker-node .node-circle {
+  border-color: #555;
+}
+
+/* Control panel */
+#control-panel {
+  width: 320px;
+  border-left: 1px solid #ddd;
+  padding: 20px;
+  background-color: #ffffff;
+  overflow-y: auto;
+}
+
+/* Headings and section labels */
+#control-panel h2 {
+  font-size: 1.3rem;
+  margin-bottom: 16px;
+  color: #007bff;
+}
+.panel-section {
+  margin-bottom: 14px;
+}
+.panel-section label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Inputs and dropdowns */
+#algorithm-select,
+#array-length,
+#coordinator-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 14px;
+  background-color: #007bff;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: center;
+  font-size: 0.95rem;
+}
+.btn:hover {
+  background-color: #0069d9;
+}
+.btn:active {
+  background-color: #005cbf;
+}
+
+/* Remove‐button styling: small, auto‐sized */
+.remove-btn {
+  background-color: #dc3545;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.remove-btn:hover {
+  background-color: #c82333;
+}
+.remove-btn:active {
+  background-color: #bd2130;
+}
+
+/* Worker list styles */
+.worker-row {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #fafafa;
+  display: flex;
+  flex-direction: column;
+}
+
+.worker-row .row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.worker-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.worker-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.worker-controls select {
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.runtime {
+  font-size: 0.85rem;
+  color: #666666;
+}
+
+/* Log Viewer (now a scrollable div) */
+#log-container {
+  margin-top: 10px;
+}
+.log-container {
+  width: 100%;
+  max-height: 200px;
+  background-color: #000000;
+  padding: 8px;
+  overflow-y: auto;
+  font-family: Consolas, monospace;
+  font-size: 0.9rem;
+  color: #ffffff; /* default text color is white */
+  border: 1px solid #444;
+  border-radius: 4px;
+}
+
+/* Per‐line log classes */
+.log-info {
+  color: #ffffff; /* white for normal info */
+}
+.log-warning {
+  color: #fd7e14; /* orange for warnings */
+}
+.log-error {
+  color: #dc3545; /* red for errors */
+}
+
+/* Line styles (unchanged) */
+line {
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.connected {
+  stroke: #28a745;
+}
+
+.working {
+  stroke: #28a745;
+  animation: pulse 2s infinite;
+}
+
+.suspended {
+  stroke: #fd7e14;
+}
+
+.disconnected {
+  stroke: #dc3545;
+}
+
+@keyframes pulse {
+  0%   { stroke-opacity: 1; }
+  50%  { stroke-opacity: 0.3; }
+  100% { stroke-opacity: 1; }
+}
+
+/* Scrollbar styling for log area (optional) */
+.log-container::-webkit-scrollbar {
+  width: 6px;
+}
+.log-container::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.2);
+  border-radius: 3px;
+}

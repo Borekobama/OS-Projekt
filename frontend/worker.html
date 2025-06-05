@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Worker View</title>
+
+  <!-- Google Font (same as index.html) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Reuse your existing stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #f9f9f9;
+    }
+    .container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!--LEFT SIDE: Diagram Only-->
+    <div id="diagram-container">
+      <svg id="connections"></svg>
+
+      <!-- “Center” node in the middle -->
+      <div id="center" class="node">
+        <div class="node-circle center-circle">
+          <img src="computer.png" alt="Center" />
+        </div>
+        <div class="node-label">Center</div>
+      </div>
+
+      <!-- Worker nodes will be appended here dynamically -->
+      <div id="workers-container"></div>
+    </div>
+
+
+    <!--RIGHT SIDE: Register Panel-->
+    <div id="worker-register-panel" style="width: 320px; border-left: 1px solid #ddd; padding: 20px; background: #fff;">
+      <h2>Register as a Worker</h2>
+      <div class="panel-section">
+        <label for="worker-name-input"><strong>Your Name:</strong></label>
+        <input type="text" id="worker-name-input" placeholder="Enter your name" style="width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;" />
+      </div>
+      <div class="panel-section">
+        <button id="worker-register-btn" class="btn">Register</button>
+      </div>
+      <hr />
+      <p style="font-size: 0.9rem; color: #555;">
+        Once registered, you will appear in the live diagram. You can also
+        see logs by checking “Show Logs” below:
+      </p>
+      <div class="panel-section">
+        <label>
+          <input type="checkbox" id="toggle-logs" />
+          Show Logs
+        </label>
+      </div>
+      <div id="log-container" style="display: none; margin-top: 10px;">
+        <div id="log-output" class="log-container"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!--Socket.IO Client-->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <!-- Main JavaScript (reuse most of script.js logic) -->
+  <script src="script.js"></script>
+
+  <script>
+    // Register‐button logic (worker.html)
+    window.addEventListener('load', () => {
+      const registerBtn = document.getElementById('worker-register-btn');
+      const nameInput = document.getElementById('worker-name-input');
+
+      registerBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name) {
+          alert('Please enter your name before registering.');
+          return;
+        }
+
+        // Unique ID assignation. --> Make it chronological, 1, 2, 3 etc.
+        const newWorkerId = 'worker-' + Date.now();
+        const payload = {
+          id: newWorkerId,
+          name: name,
+          status: 'connected'
+        };
+
+        fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(resp => {
+          if (!resp.ok) {
+            throw new Error(`Register failed: ${resp.status}`);
+          }
+          registerBtn.disabled = true;
+          nameInput.disabled = true;
+          // The real “join” of the worker will happen via the socket’s “initial_snapshot” or “worker_added” events.
+        })
+        .catch(err => {
+          console.error('Error registering as worker:', err);
+          alert('There was an error registering. Check console for details.');
+        });
+      });
+
+      // Also reuse the existing “Show Logs” toggle logic from script.js:
+      const toggleLogsCheckbox = document.getElementById('toggle-logs');
+      const logContainer = document.getElementById('log-container');
+      toggleLogsCheckbox.addEventListener('change', (e) => {
+        logContainer.style.display = e.target.checked ? 'block' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>
