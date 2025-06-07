@@ -9,10 +9,10 @@ COPY index.html /usr/share/nginx/html/
 COPY style.css /usr/share/nginx/html/
 COPY script.js /usr/share/nginx/html/
 COPY logs.html /usr/share/nginx/html/logs.html
-COPY logs.html /usr/share/nginx/html/worker.html
+COPY worker.html /usr/share/nginx/html/worker.html
 COPY computer.png /usr/share/nginx/html/
 
-# Ensure permissions
+# Ensure permissions (optional but good practice)
 RUN chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
