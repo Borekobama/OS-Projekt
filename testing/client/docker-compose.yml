@@ -1,0 +1,13 @@
+services:
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SERVER_IP=${SERVER_IP:-188.245.63.120}
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: bridge

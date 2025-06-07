@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  server:
+    container_name: server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    networks:
+      - server-network
+networks:
+  server-network:
+    driver: bridge
