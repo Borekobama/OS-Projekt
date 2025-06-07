@@ -1,0 +1,10 @@
+{
+  "name": "remote-worker",
+  "version": "1.0.0",
+  "description": "Remote Docker Worker Client for OS-Projekt",
+  "main": "worker-client.js",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "uuid": "^9.0.0"
+  }
+}

@@ -12,7 +12,7 @@ COPY logs.html /usr/share/nginx/html/logs.html
 COPY worker.html /usr/share/nginx/html/worker.html
 COPY computer.png /usr/share/nginx/html/
 
-# Ensure permissions
+# Ensure permissions (optional but good practice)
 RUN chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
