@@ -26,7 +26,7 @@ async function register() {
   }
 }
 
-// Heartbeat: alle 3 Sekunden "ich bin noch da" senden
+// Heartbeat: alle 30 Sekunden "ich bin noch da" senden
 async function heartbeat() {
   try {
     await axios.post(`${BACKEND_URL}/register`, {
@@ -34,7 +34,7 @@ async function heartbeat() {
       name: WORKER_NAME,
       status: 'connected'
     });
-    console.log('✅ Heartbeat sent');
+    // console.log('✅ Heartbeat sent');
   } catch (err) {
     console.error('❌ Heartbeat failed:', err.message);
   }
@@ -42,5 +42,5 @@ async function heartbeat() {
 
 (async () => {
   await register();
-  setInterval(heartbeat, 3000);
+  setInterval(heartbeat, 30000);
 })();

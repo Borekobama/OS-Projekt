@@ -94,30 +94,27 @@
           return;
         }
 
-        // Unique ID assignation. --> Make it chronological, 1, 2, 3 etc.
-        const newWorkerId = 'worker-' + Date.now();
-        const payload = {
-          id: newWorkerId,
-          name: name,
-          status: 'connected'
-        };
-
-        fetch('/register', {
+        // Spawn real worker via Backend
+        fetch('/spawn-worker', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ name })
         })
         .then(resp => {
           if (!resp.ok) {
-            throw new Error(`Register failed: ${resp.status}`);
+            throw new Error(`Spawn failed: ${resp.status}`);
           }
+          return resp.json();
+        })
+        .then(data => {
+          console.log('Spawn response:', data);
+          alert('Worker successfully spawned!');
           registerBtn.disabled = true;
           nameInput.disabled = true;
-          // The real “join” of the worker will happen via the socket’s “initial_snapshot” or “worker_added” events.
         })
         .catch(err => {
-          console.error('Error registering as worker:', err);
-          alert('There was an error registering. Check console for details.');
+          console.error('Error spawning worker:', err);
+          alert('There was an error spawning the worker. Check console for details.');
         });
       });
 

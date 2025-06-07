@@ -7,6 +7,7 @@ const { Server } = require('socket.io');
 const { createClient } = require('redis');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -305,6 +306,33 @@ app.post('/sort', async (req, res) => {
   }
 });
 
+// 7) Spawn real worker container
+app.post('/spawn-worker', async (req, res) => {
+  const { name } = req.body;
+  if (!name || name.trim() === '') {
+    return res.status(400).json({ error: 'Worker name is required' });
+  }
+
+  const workerName = name.trim();
+  const uniqueId = `worker-${Date.now()}`;  // simple unique ID
+
+  // Build Docker run command
+  const dockerCmd = `docker run -d --rm --network docker-net \
+    -e BACKEND_URL=http://backend:3000 \
+    -e WORKER_NAME="${workerName}" \
+    os-projekt-worker`;
+
+  console.log(`[SPAWN] Running: ${dockerCmd}`);
+
+  exec(dockerCmd, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`[SPAWN] Failed to start worker:`, err);
+      return res.status(500).json({ error: 'Failed to start worker', details: err.message });
+    }
+    console.log(`[SPAWN] Worker started. Container ID: ${stdout.trim()}`);
+    res.json({ success: true, workerId: uniqueId, containerId: stdout.trim() });
+  });
+});
 
 // ─── Start HTTP + WebSocket server on port 3000 ───────────────────────────────
 const PORT = 3000;
