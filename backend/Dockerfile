@@ -4,16 +4,16 @@ FROM node:18-alpine
 # Create app directory
 WORKDIR /usr/src/app
 
-# Copy package.json and install dependencies
+# Copy package.json
 COPY package.json ./
 RUN npm install --production
 
-# Copy server code
+# Copy server code + algorithms
 COPY server.js ./
 COPY algorithms ./algorithms
 
 # Expose port 3000
 EXPOSE 3000
 
-# Start the backend
-CMD ["npm", "start"]
+# Start the backend directly
+CMD ["node", "server.js"]

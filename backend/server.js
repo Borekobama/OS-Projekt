@@ -284,6 +284,28 @@ app.get('/workers', (req, res) => {
   res.json({ workers: arr, coordinatorId: currentCoordinatorId });
 });
 
+// 6) POST /sort → manual sort over Web-UI
+app.post('/sort', async (req, res) => {
+  const { array, workers } = req.body;
+
+  if (!array || !Array.isArray(array)) {
+    return res.status(400).json({ error: 'Missing array field in request body.' });
+  }
+
+  const numWorkers = workers || 4;
+
+  try {
+    const sorter = require('./algorithms/oddevensort/index.js');
+    const chunks = sorter.splitIntoChunks(array, numWorkers);
+    const sorted = await sorter.oddEvenSortParallel(chunks, io, ''); // <- io kannst du übergeben, wenn du Logs willst
+    res.json({ sorted });
+  } catch (err) {
+    console.error('Error while sorting:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
 // ─── Start HTTP + WebSocket server on port 3000 ───────────────────────────────
 const PORT = 3000;
 server.listen(PORT, () => {
