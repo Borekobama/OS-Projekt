@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Distributed Odd-Even Sort Demo</title>
+  <title>Distributed Operations &amp; Sort Demo</title>
 
   <!-- Google Font -->
   <link
@@ -33,7 +33,7 @@
     <div id="control-panel">
       <h2>Administrator Panel</h2>
 
-      <!-- (A) Algorithm selector -->
+      <!-- Algorithm selector -->
       <div class="panel-section">
         <label for="algorithm-select"><strong>Algorithm:</strong></label>
         <select id="algorithm-select">
@@ -41,20 +41,62 @@
         </select>
       </div>
 
-      <!-- (B) Array length input -->
+      <!-- Operation selector -->
       <div class="panel-section">
-        <label for="array-length"><strong>Array Length:</strong></label>
-        <input type="number" id="array-length" min="1" value="1000" />
+        <label><strong>Operation:</strong></label>
+        <div id="operation-buttons">
+          <button class="btn op-btn" data-op="SUM">SUM</button>
+          <button class="btn op-btn" data-op="MIN">MIN</button>
+          <button class="btn op-btn" data-op="MAX">MAX</button>
+          <button class="btn op-btn" data-op="SORT">SORT</button>
+        </div>
       </div>
 
-      <!-- (C) Start button -->
+      <!-- Array length + Generate Array -->
       <div class="panel-section">
-        <button id="start-sort-btn" class="btn">Start Sorting</button>
+        <label for="array-length"><strong>Array Length:</strong></label>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input
+            type="number"
+            id="array-length"
+            min="1"
+            value="1000"
+            style="width: 100px;"
+          />
+          <button
+            id="generate-array-btn"
+            class="btn"
+            style="white-space: nowrap; width: 160px;"
+          >
+            Generate Array
+          </button>
+        </div>
+      </div>
+
+      <!-- Custom array input -->
+      <div class="panel-section">
+        <label for="custom-array"><strong>Custom Array:</strong></label>
+        <input
+          type="text"
+          id="custom-array"
+          placeholder="[1,2,3,4]"
+          style="height: calc(1.5em + 12px);"
+        />
+      </div>
+
+      <!-- Distribute Array -->
+      <div class="panel-section">
+        <button id="distribute-array-btn" class="btn">Distribute Array</button>
+      </div>
+
+      <!-- Start Operation -->
+      <div class="panel-section">
+        <button id="start-operation-btn" class="btn">Start Operation</button>
       </div>
 
       <hr />
 
-      <!-- (D) Choose Coordinator dropdown -->
+      <!-- Choose Coordinator dropdown -->
       <div class="panel-section">
         <label for="coordinator-select"><strong>Choose Coordinator:</strong></label>
         <select id="coordinator-select">
@@ -62,17 +104,17 @@
         </select>
       </div>
 
-      <!-- (E) Add Worker button -->
+      <!-- Add Worker button -->
       <div class="panel-section">
         <button id="add-worker-btn" class="btn">Add Worker</button>
       </div>
 
-      <!-- (F) Worker list -->
+      <!-- Worker list -->
       <div id="workers-list"></div>
 
       <hr />
 
-      <!-- (G) Log Viewer -->
+      <!-- Log Viewer -->
       <div class="panel-section">
         <label>
           <input type="checkbox" id="toggle-logs" />
@@ -80,7 +122,6 @@
         </label>
       </div>
       <div id="log-container" style="display: none;">
-        <!-- Replaced textarea with a scrollable div -->
         <div id="log-output" class="log-container"></div>
       </div>
     </div>
@@ -89,7 +130,10 @@
 
   <!-- Socket.io client library -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <!-- Main JavaScript (always placed at end of body!) -->
-  <script src="script.js"></script>
+  <!-- Main JavaScript -->
+  <script src="connection.js"></script>
+  <script src="coordinator.js"></script>
+  <script src="main.js"></script>
+  <script src="worker.js"></script>
 </body>
 </html>
