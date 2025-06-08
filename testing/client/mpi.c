@@ -7,41 +7,76 @@
 #include "mpi.h"
 
 void mpi_init(MPICommunicator *comm, const char *server_ip) {
+    printf("Starting mpi_init with server_ip: %s\n", server_ip);
     strcpy(comm->server_ip, server_ip);
     comm->socket_fd = -1;
-    
-    // Initialisierungsanfrage, um Rank zu erhalten
-    int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock_fd < 0) { perror("Socket creation failed"); exit(1); }
+    comm->rank = 0; // Sicherheitsinitialisierung
+    comm->size = 0; // Sicherheitsinitialisierung
 
-    struct sockaddr_in server_addr;
+    int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock_fd < 0) {
+        perror("Socket creation failed in mpi_init");
+        exit(1);
+    }
+    printf("Socket created in mpi_init\n");
+
+    struct sockaddr_in server_addr = {0};
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(80);
     if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
-        perror("Invalid address"); exit(1);
+        perror("Invalid address in mpi_init");
+        close(sock_fd);
+        exit(1);
     }
+    printf("Address resolved in mpi_init\n");
 
     if (connect(sock_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Connection failed"); exit(1);
+        perror("Connection failed in mpi_init");
+        close(sock_fd);
+        exit(1);
     }
+    printf("Connected to server in mpi_init\n");
 
-    char request[MAX_BUFFER];
+    char request[MAX_BUFFER] = {0};
     snprintf(request, MAX_BUFFER, "POST /init HTTP/1.1\r\nHost: %s\r\nContent-Length: 0\r\n\r\n", server_ip);
     if (write(sock_fd, request, strlen(request)) < 0) {
-        perror("Write failed"); exit(1);
+        perror("Write failed in mpi_init");
+        close(sock_fd);
+        exit(1);
+    }
+    printf("Init request sent in mpi_init\n");
+
+    char buffer[MAX_BUFFER] = {0};
+    int bytes_read = read(sock_fd, buffer, MAX_BUFFER - 1);
+    if (bytes_read <= 0) {
+        printf("No response or error reading in mpi_init, bytes_read: %d\n", bytes_read);
+        close(sock_fd);
+        exit(1);
+    }
+    buffer[bytes_read] = '\0';
+    printf("Received response in mpi_init: %s\n", buffer);
+
+    char *body = strstr(buffer, "\r\n\r\n");
+    if (body) {
+        body += 4;
+        if (sscanf(body, "{\"rank\": %d, \"size\": %d}", &comm->rank, &comm->size) != 2) {
+            printf("Failed to parse rank and size from: %s\n", body);
+            comm->rank = 0;
+            comm->size = 0;
+            close(sock_fd);
+            exit(1);
+        }
+        printf("Parsed rank: %d, size: %d in mpi_init\n", comm->rank, comm->size);
+    } else {
+        printf("No body found in response: %s\n", buffer);
+        comm->rank = 0;
+        comm->size = 0;
+        close(sock_fd);
+        exit(1);
     }
 
-    char buffer[MAX_BUFFER];
-    int bytes_read = read(sock_fd, buffer, MAX_BUFFER - 1);
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        char *body = strstr(buffer, "\r\n\r\n");
-        if (body) {
-            body += 4;
-            sscanf(body, "{\"rank\": %d, \"size\": %d}", &comm->rank, &comm->size);
-        }
-    }
     close(sock_fd);
+    printf("mpi_init completed successfully\n");
 }
 
 int mpi_get_rank(MPICommunicator *comm) { return comm->rank; }
@@ -160,7 +195,6 @@ int mpi_receive(void *buffer, int maxCount, MPIDatatype datatype, int source, in
                     token = strtok(NULL, ",");
                 }
             } else {
-                // Einzelwert
                 int value;
                 sscanf(body, "{\"rank\": %*d, \"tag\": %*d, \"data\": %d}", &value);
                 if (count < maxCount) {
@@ -182,7 +216,6 @@ int mpi_receive(void *buffer, int maxCount, MPIDatatype datatype, int source, in
                     token = strtok(NULL, ",");
                 }
             } else {
-                // Einzelwert
                 double value;
                 sscanf(body, "{\"rank\": %*d, \"tag\": %*d, \"data\": %lf}", &value);
                 if (count < maxCount) {
