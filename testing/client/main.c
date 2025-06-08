@@ -7,8 +7,8 @@
 #include "mpi.h"
 
 int main() {
-    MPICommunicator comm;
-    const char *server_ip = getenv("SERVER_IP") ? getenv("SERVER_IP") : "188.245.63.120";
+    MPICommunicator comm = {0}; // Initialisiere Struktur mit Nullen
+    const char *server_ip = getenv("SERVER_IP") ? getenv("SERVER_IP") : "172.20.10.5";
 
     // Initialisierung
     printf("Initializing with server IP: %s\n", server_ip);
@@ -29,7 +29,7 @@ int main() {
                comm.rank == 1 ? "yes" : "no",
                comm.size);
 
-        // Sende Heartbeat-Nachricht an den Server, um Verbindung zu bestätigen
+        // Sende Heartbeat-Nachricht an den Server
         char request[1024] = {0};
         int request_len = snprintf(request, sizeof(request),
                  "POST /heartbeat?rank=%d HTTP/1.1\r\nHost: %s\r\nContent-Length: 0\r\n\r\n",
@@ -87,6 +87,21 @@ int main() {
         }
 
         close(sock_fd);
+
+        // Sende Nachricht an alle anderen Ranks
+        int message = comm.rank; // Sende den eigenen Rank als Nachricht
+        for (int dest = 1; dest <= comm.size; dest++) {
+            if (dest != comm.rank) {
+                mpi_send(&message, 1, INT, dest, TAG_MESSAGE, &comm); // Verwende TAG_MESSAGE
+                printf("Rank %d sent message to Rank %d: %d\n", comm.rank, dest, message);
+            }
+        }
+
+        // Aktualisiere Ranks und wähle neuen Coordinator, wenn nötig
+        mpi_update_ranks(&comm);
+        if (comm.rank == 1) {
+            mpi_elect_new_coordinator(&comm);
+        }
 
         // Warte 5 Sekunden vor dem nächsten Heartbeat
         sleep(5);

@@ -1,10 +1,12 @@
 #ifndef MPI_H
 #define MPI_H
 
-#define ANY_TAG -1
-#define TAG_DATA 0
-#define TAG_REDUCE 1
-#define MAX_BUFFER 1024
+typedef struct {
+    int rank;
+    int size;
+    char server_ip[16];
+    int socket_fd;
+} MPICommunicator;
 
 typedef enum {
     INT,
@@ -13,19 +15,21 @@ typedef enum {
 } MPIDatatype;
 
 typedef enum {
+    TAG_INIT = 1,
+    TAG_PING = 2,
+    TAG_UPDATE = 3,
+    TAG_ELECT = 4,
+    TAG_MESSAGE = 5,
+    TAG_DATA = 6,
+    TAG_REDUCE = 7
+} MPITag;
+
+typedef enum {
     SUM,
     MAX,
     MIN
 } ReduceOperation;
 
-typedef struct {
-    int rank;           // Prozess-ID (1 = Contributor, >1 = Worker)
-    int size;           // Anzahl der Prozesse
-    char server_ip[16]; // Server-IP (z. B. "188.245.63.120")
-    int socket_fd;      // Socket für Kommunikation mit dem Server
-} MPICommunicator;
-
-// Funktionen
 void mpi_init(MPICommunicator *comm, const char *server_ip);
 int mpi_get_rank(MPICommunicator *comm);
 int mpi_get_size(MPICommunicator *comm);
@@ -38,5 +42,7 @@ void mpi_broadcast(const char *message, MPICommunicator *comm);
 char* mpi_receive_broadcast(MPICommunicator *comm);
 void mpi_barrier(MPICommunicator *comm);
 void mpi_finalize(MPICommunicator *comm);
+void mpi_update_ranks(MPICommunicator *comm);
+void mpi_elect_new_coordinator(MPICommunicator *comm);
 
 #endif
