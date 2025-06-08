@@ -1,55 +1,60 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "mpi.h"
 
 int main() {
     MPICommunicator comm;
     const char *server_ip = getenv("SERVER_IP") ? getenv("SERVER_IP") : "188.245.63.120";
-    
+
+    // Initialisierung
     mpi_init(&comm, server_ip);
-    printf("Rank: %d, Size: %d, IsContributor: %d\n", mpi_get_rank(&comm), mpi_get_size(&comm), mpi_is_contributor(&comm));
+    printf("Rank: %d, Size: %d, IsContributor: %d\n",
+           mpi_get_rank(&comm), mpi_get_size(&comm), mpi_is_contributor(&comm));
 
-    if (mpi_is_contributor(&comm)) {
-        int value = 10;
-        int result = mpi_reduce(value, SUM, &comm);
-        printf("Contributor: Reduced value = %d\n", result);
+    // Unendliche Schleife, um Verbindung aufrechtzuerhalten
+    while (1) {
+        printf("Rank %d (Contributor: %d) is running, Size: %d\n",
+               mpi_get_rank(&comm), mpi_is_contributor(&comm), mpi_get_size(&comm));
 
-        int data[] = {1, 2, 3, 4, 5, 6};
-        int chunkSizes[] = {2, 2, 2};
-        int *chunk = mpi_scatter(data, chunkSizes, &comm);
-        printf("Contributor: Scattered chunk = [%d, %d]\n", chunk[0], chunk[1]);
-        free(chunk);
+        // Sende Heartbeat-Nachricht an den Server, um Verbindung zu bestätigen
+        char request[1024];
+        snprintf(request, 1024,
+                 "POST /heartbeat?rank=%d HTTP/1.1\r\nHost: %s\r\nContent-Length: 0\r\n\r\n",
+                 mpi_get_rank(&comm), server_ip);
 
-        int *gather_data = malloc(2 * sizeof(int));
-        gather_data[0] = 10; gather_data[1] = 20;
-        int **allData = mpi_gather(gather_data, 2, &comm);
-        for (int i = 0; i < mpi_get_size(&comm); i++) {
-            printf("Contributor: Gathered from %d: [%d, %d]\n", i, allData[i][0], allData[i][1]);
-            free(allData[i]);
+        int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock_fd < 0) { perror("Socket creation failed"); continue; }
+
+        struct sockaddr_in server_addr;
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_port = htons(80);
+        if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
+            perror("Invalid address"); close(sock_fd); continue;
         }
-        free(allData);
-        free(gather_data);
 
-        mpi_broadcast("Hello from Contributor", &comm);
-    } else {
-        int value = mpi_get_rank(&comm) * 10;
-        mpi_reduce(value, SUM, &comm);
+        if (connect(sock_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+            perror("Connection failed"); close(sock_fd); continue;
+        }
 
-        int *chunk = mpi_scatter(NULL, NULL, &comm);
-        printf("Worker %d: Scattered chunk = [%d, %d]\n", mpi_get_rank(&comm), chunk[0], chunk[1]);
-        free(chunk);
+        if (write(sock_fd, request, strlen(request)) < 0) {
+            perror("Write failed"); close(sock_fd); continue;
+        }
 
-        int *gather_data = malloc(2 * sizeof(int));
-        gather_data[0] = mpi_get_rank(&comm) * 100; gather_data[1] = mpi_get_rank(&comm) * 200;
-        mpi_gather(gather_data, 2, &comm);
-        free(gather_data);
+        char response[1024];
+        int bytes_read = read(sock_fd, response, 1023);
+        if (bytes_read > 0) {
+            response[bytes_read] = '\0';
+            printf("Rank %d: Heartbeat response: %s\n", mpi_get_rank(&comm), response);
+        }
 
-        char *message = mpi_receive_broadcast(&comm);
-        printf("Worker %d: Broadcast = %s\n", mpi_get_rank(&comm), message);
-        free(message);
+        close(sock_fd);
+
+        // Warte 5 Sekunden vor dem nächsten Heartbeat
+        sleep(5);
     }
 
-    mpi_barrier(&comm);
+    // Finalisierung (wird in dieser Version nicht erreicht)
     mpi_finalize(&comm);
     return 0;
 }

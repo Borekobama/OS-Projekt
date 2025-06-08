@@ -39,7 +39,6 @@ void mpi_init(MPICommunicator *comm, const char *server_ip) {
         if (body) {
             body += 4;
             sscanf(body, "{\"rank\": %d, \"size\": %d}", &comm->rank, &comm->size);
-            comm->isContributor = (comm->rank == 1);
         }
     }
     close(sock_fd);
@@ -47,7 +46,6 @@ void mpi_init(MPICommunicator *comm, const char *server_ip) {
 
 int mpi_get_rank(MPICommunicator *comm) { return comm->rank; }
 int mpi_get_size(MPICommunicator *comm) { return comm->size; }
-int mpi_is_contributor(MPICommunicator *comm) { return comm->isContributor; }
 
 void mpi_send(void *buffer, int count, MPIDatatype datatype, int dest, int tag, MPICommunicator *comm) {
     int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -151,27 +149,45 @@ int mpi_receive(void *buffer, int maxCount, MPIDatatype datatype, int source, in
     switch (datatype) {
         case INT: {
             int *int_buffer = (int*)buffer;
-            char *data = strstr(body, "\"data\": [") + 8;
-            char *end = strstr(data, "]");
-            if (!end) { close(sock_fd); return 0; }
-            *end = '\0';
-            char *token = strtok(data, ",");
-            while (token && count < maxCount) {
-                int_buffer[count++] = atoi(token);
-                token = strtok(NULL, ",");
+            char *data = strstr(body, "\"data\": [") ? strstr(body, "\"data\": [") + 8 : body;
+            if (strstr(body, "\"data\": [")) {
+                char *end = strstr(data, "]");
+                if (!end) { close(sock_fd); return 0; }
+                *end = '\0';
+                char *token = strtok(data, ",");
+                while (token && count < maxCount) {
+                    int_buffer[count++] = atoi(token);
+                    token = strtok(NULL, ",");
+                }
+            } else {
+                // Einzelwert
+                int value;
+                sscanf(body, "{\"rank\": %*d, \"tag\": %*d, \"data\": %d}", &value);
+                if (count < maxCount) {
+                    int_buffer[count++] = value;
+                }
             }
             break;
         }
         case DOUBLE: {
             double *double_buffer = (double*)buffer;
-            char *data = strstr(body, "\"data\": [") + 8;
-            char *end = strstr(data, "]");
-            if (!end) { close(sock_fd); return 0; }
-            *end = '\0';
-            char *token = strtok(data, ",");
-            while (token && count < maxCount) {
-                double_buffer[count++] = atof(token);
-                token = strtok(NULL, ",");
+            char *data = strstr(body, "\"data\": [") ? strstr(body, "\"data\": [") + 8 : body;
+            if (strstr(body, "\"data\": [")) {
+                char *end = strstr(data, "]");
+                if (!end) { close(sock_fd); return 0; }
+                *end = '\0';
+                char *token = strtok(data, ",");
+                while (token && count < maxCount) {
+                    double_buffer[count++] = atof(token);
+                    token = strtok(NULL, ",");
+                }
+            } else {
+                // Einzelwert
+                double value;
+                sscanf(body, "{\"rank\": %*d, \"tag\": %*d, \"data\": %lf}", &value);
+                if (count < maxCount) {
+                    double_buffer[count++] = value;
+                }
             }
             break;
         }
@@ -191,21 +207,12 @@ int mpi_receive(void *buffer, int maxCount, MPIDatatype datatype, int source, in
     return count;
 }
 
-void mpi_send_int(int value, int dest, MPICommunicator *comm) {
-    mpi_send(&value, 1, INT, dest, TAG_DATA, comm);
-}
-
-int mpi_receive_int(int source, MPICommunicator *comm) {
-    int buffer[1];
-    mpi_receive(buffer, 1, INT, source, ANY_TAG, comm);
-    return buffer[0];
-}
-
 int mpi_reduce(int value, ReduceOperation op, MPICommunicator *comm) {
-    if (comm->isContributor) {
+    if (comm->rank == 1) {
         int result = value;
         for (int i = 2; i <= comm->size; i++) {
-            int buffer = mpi_receive_int(i, comm);
+            int buffer;
+            mpi_receive(&buffer, 1, INT, i, TAG_REDUCE, comm);
             switch (op) {
                 case SUM: result += buffer; break;
                 case MAX: if (buffer > result) result = buffer; break;
@@ -214,13 +221,13 @@ int mpi_reduce(int value, ReduceOperation op, MPICommunicator *comm) {
         }
         return result;
     } else {
-        mpi_send_int(value, 1, comm);
+        mpi_send(&value, 1, INT, 1, TAG_REDUCE, comm);
         return value;
     }
 }
 
 int** mpi_gather(int *data, int count, MPICommunicator *comm) {
-    if (comm->isContributor) {
+    if (comm->rank == 1) {
         int **allData = malloc(comm->size * sizeof(int*));
         allData[0] = malloc(count * sizeof(int));
         memcpy(allData[0], data, count * sizeof(int));
@@ -236,7 +243,7 @@ int** mpi_gather(int *data, int count, MPICommunicator *comm) {
 }
 
 int* mpi_scatter(int *data, int *chunkSizes, MPICommunicator *comm) {
-    if (comm->isContributor) {
+    if (comm->rank == 1) {
         int index = chunkSizes[0];
         for (int i = 2; i <= comm->size; i++) {
             int *chunk = malloc(chunkSizes[i-1] * sizeof(int));
@@ -256,8 +263,8 @@ int* mpi_scatter(int *data, int *chunkSizes, MPICommunicator *comm) {
 }
 
 void mpi_broadcast(const char *message, MPICommunicator *comm) {
-    if (!comm->isContributor) {
-        fprintf(stderr, "Only Contributor can broadcast\n");
+    if (comm->rank != 1) {
+        fprintf(stderr, "Only Contributor (Rank 1) can broadcast\n");
         exit(1);
     }
     char request[MAX_BUFFER];
@@ -286,8 +293,8 @@ void mpi_broadcast(const char *message, MPICommunicator *comm) {
 }
 
 char* mpi_receive_broadcast(MPICommunicator *comm) {
-    if (comm->isContributor) {
-        fprintf(stderr, "Contributor does not receive broadcasts\n");
+    if (comm->rank == 1) {
+        fprintf(stderr, "Contributor (Rank 1) does not receive broadcasts\n");
         exit(1);
     }
     int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
