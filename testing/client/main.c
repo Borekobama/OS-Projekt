@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <string.h>
 #include "mpi.h"
 
 int main() {
@@ -9,13 +12,16 @@ int main() {
 
     // Initialisierung
     mpi_init(&comm, server_ip);
-    printf("Rank: %d, Size: %d, IsContributor: %d\n",
-           mpi_get_rank(&comm), mpi_get_size(&comm), mpi_is_contributor(&comm));
+    printf("Rank: %d, Size: %d, Contributor: %s\n",
+           mpi_get_rank(&comm), mpi_get_size(&comm),
+           mpi_get_rank(&comm) == 1 ? "yes" : "no");
 
     // Unendliche Schleife, um Verbindung aufrechtzuerhalten
     while (1) {
-        printf("Rank %d (Contributor: %d) is running, Size: %d\n",
-               mpi_get_rank(&comm), mpi_is_contributor(&comm), mpi_get_size(&comm));
+        printf("Rank %d (Contributor: %s) is running, Size: %d\n",
+               mpi_get_rank(&comm),
+               mpi_get_rank(&comm) == 1 ? "yes" : "no",
+               mpi_get_size(&comm));
 
         // Sende Heartbeat-Nachricht an den Server, um Verbindung zu bestätigen
         char request[1024];
