@@ -19,13 +19,8 @@ services:
     depends_on:
       - wireguard
     environment:
-      - COORDINATOR_IP=188.245.63.120
-    command: [ "./main", "c"]
-    entrypoint:
-      - sh
-      - -c
-      - |
-        echo "Waiting for WireGuard to be ready..."
-        sleep 5
-        echo "Starting worker..."
-        exec ./main c
+      - COORDINATOR_IP=10.8.0.3
+    tty: true
+    stdin_open: true
+    entrypoint: [ ]
+    command: [ "./main", "c" ]

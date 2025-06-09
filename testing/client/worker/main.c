@@ -4,6 +4,7 @@
 #include "algorithms.h"
 
 int main(int argc, char* argv[]) {
+    setvbuf(stdout, NULL, _IONBF, 0);
     if (argc < 2) {
         printf("Usage:\nCoordinator: c\n");
         printf("Worker: w\n");

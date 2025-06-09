@@ -1,6 +1,5 @@
 services:
   wireguard:
-    container_name: wireguard
     image: jordanpotter/wireguard
     cap_add:
       - NET_ADMIN
@@ -20,13 +19,5 @@ services:
     depends_on:
       - wireguard
     environment:
-      - COORDINATOR_IP=188.245.63.120
-    command: [ "./main", "w", "188.245.63.120"]
-    entrypoint:
-      - sh
-      - -c
-      - |
-        echo "Waiting for WireGuard to be ready..."
-        sleep 5
-        echo "Starting worker..."
-        exec ./main w ${COORDINATOR_IP}
+      - COORDINATOR_IP=10.8.0.3
+    command: [ "./main", "w", "10.8.0.3"]
