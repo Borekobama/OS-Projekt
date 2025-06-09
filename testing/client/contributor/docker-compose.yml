@@ -1,0 +1,31 @@
+services:
+  wireguard:
+    image: jordanpotter/wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: 1
+    volumes:
+      - /media/sf_OS-Projekt/testing/client/vpn/wg0.conf:/etc/wireguard/wg0.conf
+    restart: unless-stopped
+
+  contributor:
+    container_name: contributor
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    network_mode: service:wireguard
+    depends_on:
+      - wireguard
+    environment:
+      - COORDINATOR_IP=188.245.63.120
+    command: [ "./main", "c"]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "Waiting for WireGuard to be ready..."
+        sleep 5
+        echo "Starting worker..."
+        exec ./main c

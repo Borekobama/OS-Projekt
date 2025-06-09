@@ -13,8 +13,6 @@ WORKDIR /app
 COPY *.c ./
 COPY *.h ./
 
-RUN gcc -o main *.c -lpthread
+RUN gcc -o main main.c network.c communicator.c algorithms.c -lpthread -Wall -O2
 
-EXPOSE 8081
-
-CMD ["./main"]
+EXPOSE 8080-9080

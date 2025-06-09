@@ -1,0 +1,18 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    make \
+    iputils-ping \
+    net-tools \
+    dnsutils \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY *.c ./
+COPY *.h ./
+
+RUN gcc -o main main.c network.c communicator.c algorithms.c -lpthread -Wall -O2
+
+EXPOSE 8080-9080
