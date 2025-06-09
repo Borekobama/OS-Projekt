@@ -3,6 +3,9 @@
 
 #include "common.h"
 
+// Function to get local IP address
+bool get_local_ip(char* ip_buffer, size_t buffer_size);
+
 // Thread function
 void* read_command_thread(void* arg);
 

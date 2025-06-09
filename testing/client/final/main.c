@@ -4,19 +4,23 @@
 #include "algorithms.h"
 
 int main(int argc, char* argv[]) {
-    if (argc < 4) {
-        printf("Usage:\nCoordinator: c <ownIP> <ownPort>\n");
-        printf("Worker: w <ownIP> <ownPort> <coordinatorIP> <coordinatorPort>\n");
+    if (argc < 2) {
+        printf("Usage:\nCoordinator: c\n");
+        printf("Worker: w\n");
         return 1;
     }
 
-    bool is_coordinator = (argv[1][0] == 'c' || argv[1][0] == 'C');
-    char* own_ip = argv[2];
-    int own_port = atoi(argv[3]);
+    bool is_coordinator = (argv[1][0] == 'c');
+
+    char own_ip[INET_ADDRSTRLEN];
+    if (!get_local_ip(own_ip, INET_ADDRSTRLEN)) {
+        fprintf(stderr, "Failed to get local IP address\n");
+        return 1;
+    }
 
     if (is_coordinator) {
-        // Run as coordinator
-        CoordinatorResult* result = setup_coordinator(own_ip, own_port);
+        // Coordinator-mode
+        CoordinatorResult* result = setup_coordinator(own_ip, COORDINATOR_PORT);
         if (!result) {
             fprintf(stderr, "Failed to setup coordinator\n");
             return 1;
@@ -32,7 +36,7 @@ int main(int argc, char* argv[]) {
             send(result->sockets[i], &ready, sizeof(int), 0);
         }
 
-        // Now establish ring connection to first worker if exists
+        // Establish ring connection to first worker if exists
         if (result->worker_count > 0) {
             sleep(1); // Give worker time to set up listener
             int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -129,19 +133,19 @@ int main(int argc, char* argv[]) {
         free_communicator(comm);
         free_coordinator_result(result);
         printf("[Coordinator] Goodbye!\n");
-
     } else {
-        // Run as worker
-        if (argc < 6) {
-            printf("Usage for Worker: w <ownIP> <ownPort> <coordinatorIP> <coordinatorPort>\n");
+        // Worker-Modus
+        if (argc < 3) {
+            printf("Usage for Worker: w <coordinator_ip>\n");
             return 1;
         }
+        const char* coordinator_ip = argv[2];
 
-        char* coordinator_ip = argv[4];
-        int coordinator_port = atoi(argv[5]);
+        srand(time(NULL)); // Für zufällige Worker-Ports
+        int own_port = COORDINATOR_PORT + 1 + rand() % 1000; // Dynamischer Port für Worker
 
         WorkerConnection* conn = connect_to_coordinator(own_ip, own_port,
-                                                       coordinator_ip, coordinator_port);
+                                                       coordinator_ip, COORDINATOR_PORT);
         if (!conn) {
             fprintf(stderr, "Failed to connect to coordinator\n");
             return 1;
@@ -153,7 +157,7 @@ int main(int argc, char* argv[]) {
 
         // Create communicator
         Communicator* comm = create_worker_communicator(conn->id, conn->socket,
-                                                       conn->own_ip, conn->own_port,
+                                                       own_ip, own_port,
                                                        conn->right_neighbor_ip,
                                                        conn->right_neighbor_port);
 

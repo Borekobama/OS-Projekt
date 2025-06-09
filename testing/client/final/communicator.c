@@ -42,58 +42,39 @@ Communicator* create_worker_communicator(int rank, int coordinator_socket,
     comm->rank = rank;
     comm->is_root = false;
     comm->size = -1; // Workers don't know total size
-    
+
     // Star topology - connection to coordinator
     comm->connection_count = 1;
     comm->connections = malloc(sizeof(int));
     comm->connections[0] = coordinator_socket;
-    
+
     // Ring topology
     comm->left_neighbor_socket = -1;
     comm->has_left_neighbor = false;
     comm->right_neighbor_socket = -1;
     comm->has_right_neighbor = false;
-    
+
     // Accept connection from left neighbor
-    if (rank > 1) {
+    if (rank > 1 || rank == 1) {
         int server_sock = socket(AF_INET, SOCK_STREAM, 0);
         int opt = 1;
         setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-        
+
         struct sockaddr_in addr;
         addr.sin_family = AF_INET;
-        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
         addr.sin_port = htons(own_port);
-        
+
         bind(server_sock, (struct sockaddr*)&addr, sizeof(addr));
         listen(server_sock, 1);
-        
-        printf("[Worker %d] Waiting for left neighbor connection...\n", rank);
+
+        printf("[Worker %d] Waiting for left neighbor connection on port %d...\n", rank, own_port);
         comm->left_neighbor_socket = accept(server_sock, NULL, NULL);
         comm->has_left_neighbor = true;
         close(server_sock);
         printf("[Worker %d] Left neighbor connected\n", rank);
-    } else if (rank == 1) {
-        // Worker 1 accepts from coordinator
-        int server_sock = socket(AF_INET, SOCK_STREAM, 0);
-        int opt = 1;
-        setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-        
-        struct sockaddr_in addr;
-        addr.sin_family = AF_INET;
-        addr.sin_addr.s_addr = INADDR_ANY;
-        addr.sin_port = htons(own_port);
-        
-        bind(server_sock, (struct sockaddr*)&addr, sizeof(addr));
-        listen(server_sock, 1);
-        
-        printf("[Worker 1] Waiting for coordinator connection...\n");
-        comm->left_neighbor_socket = accept(server_sock, NULL, NULL);
-        comm->has_left_neighbor = true;
-        close(server_sock);
-        printf("[Worker 1] Coordinator connected as left neighbor\n");
     }
-    
+
     // Connect to right neighbor if exists
     if (right_neighbor_port > 0) {
         int sock = socket(AF_INET, SOCK_STREAM, 0);

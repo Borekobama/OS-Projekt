@@ -18,6 +18,7 @@
 #define MAX_WORKERS 100
 #define BUFFER_SIZE 1024
 #define MAX_COMMAND_LEN 32
+#define COORDINATOR_PORT 8081
 
 // Data Structures
 typedef struct {
@@ -47,11 +48,11 @@ typedef struct {
     int rank;
     int size;
     bool is_root;
-    
+
     // Star topology connections
     int *connections;
     int connection_count;
-    
+
     // Ring topology connections
     int left_neighbor_socket;
     int right_neighbor_socket;
