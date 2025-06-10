@@ -1,9 +1,8 @@
 // connection.js
 
-// Hey, this is where we set up the socket connection 🙂 
 var socket = null;  // will hold our Socket.io client
 
-// Let's initialize the WebSocket connection and handle server messages
+//initialize the WebSocket connection and handle server messages
 function initializeWebSocket() {
   // connect to server
   socket = io();
