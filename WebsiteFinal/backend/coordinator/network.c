@@ -1,5 +1,5 @@
 #include "network.h"
-#include <netdb.h>
+#include <netdb.h> // Provides definitions for network database operations (e\.g\., gethostbyname, gethostbyaddr)
 
 // Returns the local IP address associated with the given socket file descriptor.
 // On success, writes the IP as a string to ip_buffer and returns true.
