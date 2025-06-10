@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
         int ready;
         recv(conn->socket, &ready, sizeof(int), 0);
 
-        // Create communicator
+        // Create communicator for the worker
         Communicator* comm = create_worker_communicator(conn->id, conn->socket,
                                                        own_ip, own_port,
                                                        conn->right_neighbor_ip,
