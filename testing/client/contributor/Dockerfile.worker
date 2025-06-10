@@ -15,4 +15,4 @@ COPY *.h ./
 
 RUN gcc -o main main.c network.c communicator.c algorithms.c -lpthread -Wall -O2
 
-EXPOSE 8080-9080
+EXPOSE 8080-9081

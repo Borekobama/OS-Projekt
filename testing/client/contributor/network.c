@@ -1,6 +1,17 @@
 #include "network.h"
 #include <netdb.h>
 
+bool get_ip_from_socket(int sock, char* ip_buffer, size_t buffer_size) {
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+
+    if (getsockname(sock, (struct sockaddr*)&addr, &addr_len) == 0) {
+        inet_ntop(AF_INET, &addr.sin_addr, ip_buffer, buffer_size);
+        return true;
+    }
+    return false;
+}
+
 bool get_local_ip(char* ip_buffer, size_t buffer_size) {
     char hostname[256];
     if (gethostname(hostname, sizeof(hostname)) != 0) {
@@ -44,7 +55,7 @@ CoordinatorResult* setup_coordinator(const char* ip, int port) {
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Auf allen Schnittstellen lauschen
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(port);
 
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -149,7 +160,7 @@ void* read_command_thread(void* arg) {
     char input[MAX_COMMAND_LEN];
     while (!data->ready) {
         if (fgets(input, MAX_COMMAND_LEN, stdin)) {
-            input[strcspn(input, "\n")] = 0; // Remove newline
+            input[strcspn(input, "\n")] = 0;
 
             // Convert to uppercase
             for (int i = 0; input[i]; i++) {
@@ -194,9 +205,17 @@ WorkerConnection* connect_to_coordinator(const char* worker_ip, int worker_port,
         return NULL;
     }
 
-    // Send registration
+    // NEUE ZEILEN HIER EINFÜGEN:
+    char actual_ip[INET_ADDRSTRLEN];
+    if (!get_ip_from_socket(sock, actual_ip, INET_ADDRSTRLEN)) {
+        fprintf(stderr, "Failed to get socket IP\n");
+        strcpy(actual_ip, worker_ip); // Fallback zur übergebenen IP
+    }
+    printf("[Worker] Using IP address: %s (was: %s)\n", actual_ip, worker_ip);
+
+    // Send registration - GEÄNDERTE ZEILE:
     char registration[BUFFER_SIZE];
-    snprintf(registration, BUFFER_SIZE, "REGISTRATION:%s:%d", worker_ip, worker_port);
+    snprintf(registration, BUFFER_SIZE, "REGISTRATION:%s:%d", actual_ip, worker_port);  // actual_ip statt worker_ip
     send(sock, registration, strlen(registration) + 1, 0);
 
     // Receive ID

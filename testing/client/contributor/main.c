@@ -27,18 +27,6 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        char command[32];
-        printf("Enter command (SUM, MIN, MAX, SORT): ");
-        fflush(stdout);
-        if (fgets(command, sizeof(command), stdin) == NULL) {
-            fprintf(stderr, "Failed to read command\n");
-            return 1;
-        }
-
-        command[strcspn(command, "\n")] = 0;
-
-        result->command = strdup(command);
-
         // Create communicator (ring connection will be established later)
         Communicator* comm = create_coordinator_communicator(0, result->sockets,
                                                            result->worker_count, NULL);

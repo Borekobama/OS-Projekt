@@ -3,7 +3,8 @@
 
 #include "common.h"
 
-// Function to get local IP address
+// Function to get IP address
+bool get_ip_from_socket(int sock, char* ip_buffer, size_t buffer_size);
 bool get_local_ip(char* ip_buffer, size_t buffer_size);
 
 // Thread function
