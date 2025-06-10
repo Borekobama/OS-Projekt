@@ -1,0 +1,7 @@
+[
+  {
+    "name": "Odd-Even Sort",
+    "key": "oddevensort",
+    "description": "Parallel odd-even sorting (distribute values across workers, then perform alternating odd/even phases)."
+  }
+]

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- logs.html – super simple live‐logs display (student edition) -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All Logs (Enlarged View)</title>
+
+  <!-- Google Font I found online -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- reuse existing stylesheet so it matches the main app -->
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Okay, so I just override a few things to make it full‐screen */
+    body, html {
+      height: 100%;
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: 'Roboto', sans-serif;
+    }
+    #big-log-container {
+      display: flex;              /* flexbox is cool and easy */
+      flex-direction: column;
+      height: 100%;
+    }
+    #big-log-header {
+      background: #111;
+      padding: 12px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #fff;
+      border-bottom: 1px solid #444;
+    }
+    #big-log-output {
+      flex: 1;
+      overflow-y: auto;           /* auto-scroll when too many lines */
+      background-color: #000;
+      padding: 10px;
+      font-family: Consolas, monospace;
+      font-size: 1rem;
+    }
+    /* I’m reusing .log-error/.log-warning/.log-info from style.css */
+  </style>
+</head>
+<body>
+  <div id="big-log-container">
+    <div id="big-log-header">
+      Live Logs (Enlarged View)
+    </div>
+    <div id="big-log-output" class="log-container"></div>
+  </div>
+
+  <!-- socket.io client from CDN -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    // ========== Live Log Viewer for /logs ==========
+    // grab the output div where I'll stick all the messages
+    var bigLogOutput = document.getElementById('big-log-output');
+
+    // a helper to append a line of text with a severity class
+    function appendBigLog(lineText, severity) {
+      // if severity not passed, assume info
+      if (!severity) {
+        severity = 'info';
+      }
+      var entry = document.createElement('div');
+      // adding class by hand since template strings feel fancy
+      entry.className = 'log-' + severity;
+      entry.textContent = lineText;
+      bigLogOutput.appendChild(entry);
+      // scroll to bottom so new entries show up
+      bigLogOutput.scrollTop = bigLogOutput.scrollHeight;
+    }
+
+    // parse the raw log line, figure out level + timestamp + worker info
+    function formatAndAppendBigLog(text) {
+      // remove the ISO timestamp prefix like [2025-06-08T12:34:56.789Z]
+      var stripped = text.replace(/^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\]\s*/, '');
+      var lower = stripped.toLowerCase();
+      var severity = 'info';
+      // basic checks for error/warning keywords
+      if (lower.indexOf('error') !== -1 || lower.indexOf('disconnected') !== -1) {
+        severity = 'error';
+      } else if (
+        lower.indexOf('waiting') !== -1 ||
+        lower.indexOf('retry') !== -1 ||
+        lower.indexOf('left') !== -1
+      ) {
+        severity = 'warning';
+      }
+      // try to pull out a worker tag if present
+      var m = stripped.match(/Worker\s+([^\s]+)/i);
+      var workerTag = '';
+      if (m && m[1]) {
+        workerTag = '[' + m[1] + '] ';
+      }
+      // get local time in HH:mm:ss (24h)
+      var now = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      // build the final line text
+      var lineText = '[' + now + '] ' + workerTag + stripped;
+      appendBigLog(lineText, severity);
+    }
+
+    // ===== Initialize WebSocket via socket.io =====
+    var socket = io();  // no options, default to same origin
+    socket.on('connect', function() {
+      appendBigLog('WebSocket connected: ' + socket.id, 'info');
+    });
+    socket.on('log_update', function(text) {
+      formatAndAppendBigLog(text);
+    });
+    socket.on('disconnect', function() {
+      appendBigLog('WebSocket disconnected', 'error');
+    });
+  </script>
+</body>
+</html>
