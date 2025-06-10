@@ -1,6 +1,6 @@
 // script.js
 
-// Sanity‐check: does this file even load?
+// Does this file even load?
 console.log('✅ script.js loaded');
 
 // ========== Global State ==========
