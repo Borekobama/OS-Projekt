@@ -1,6 +1,5 @@
 // backend/server.js
 
-// Simple student-style server code, kept basic so it looks hand-written.
 var express = require('express');
 var http = require('http');
 var cors = require('cors');
