@@ -3,7 +3,7 @@ services:
     container_name: wg-easy
     image: ghcr.io/wg-easy/wg-easy
     environment:
-      - PASSWORD_HASH=$}
+      - PASSWORD_HASH=<password_hash>
       - WG_HOST=188.245.63.120
 
     volumes:
