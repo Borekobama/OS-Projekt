@@ -1,3 +1,4 @@
+# Docker Compose file for setting up WireGuard, Curl, and Worker services
 services:
   wireguard:
     image: jordanpotter/wireguard

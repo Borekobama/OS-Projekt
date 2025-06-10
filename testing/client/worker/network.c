@@ -1,6 +1,9 @@
 #include "network.h"
 #include <netdb.h>
 
+// Returns the local IP address associated with the given socket file descriptor.
+// On success, writes the IP as a string to ip_buffer and returns true.
+// On failure, returns false.
 bool get_ip_from_socket(int sock, char* ip_buffer, size_t buffer_size) {
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
@@ -12,6 +15,8 @@ bool get_ip_from_socket(int sock, char* ip_buffer, size_t buffer_size) {
     return false;
 }
 
+// Returns the first local IPv4 address as a string in ip_buffer.
+// On success, returns true. On failure, returns false.
 bool get_local_ip(char* ip_buffer, size_t buffer_size) {
     char hostname[256];
     if (gethostname(hostname, sizeof(hostname)) != 0) {
@@ -35,13 +40,15 @@ bool get_local_ip(char* ip_buffer, size_t buffer_size) {
     return false;
 }
 
-// Thread data structure
+// Data structure for the command input thread
 struct command_thread_data {
     char command[MAX_COMMAND_LEN];
     bool ready;
     int server_socket;
 };
 
+// Sets up the coordinator server, accepts worker registrations, and manages command input.
+// Returns a pointer to a CoordinatorResult structure containing worker info and the chosen command.
 CoordinatorResult* setup_coordinator(const char* ip, int port) {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
@@ -154,6 +161,8 @@ CoordinatorResult* setup_coordinator(const char* ip, int port) {
     return result;
 }
 
+// Thread function to read a command from stdin and notify the coordinator when ready.
+// Accepts only "SUM", "MIN", "MAX", or "SORT" (case-insensitive).
 void* read_command_thread(void* arg) {
     struct command_thread_data* data = (struct command_thread_data*)arg;
 
@@ -184,6 +193,8 @@ void* read_command_thread(void* arg) {
     return NULL;
 }
 
+// Connects a worker to the coordinator, registers the worker, and receives neighbor information.
+// Returns a pointer to a WorkerConnection structure with connection details.
 WorkerConnection* connect_to_coordinator(const char* worker_ip, int worker_port,
                                         const char* coordinator_ip, int coordinator_port) {
     printf("[Worker] Connecting to coordinator at %s:%d...\n", coordinator_ip, coordinator_port);
@@ -205,24 +216,24 @@ WorkerConnection* connect_to_coordinator(const char* worker_ip, int worker_port,
         return NULL;
     }
 
-    // NEUE ZEILEN HIER EINFÜGEN:
+    // Get the actual local IP address used for the connection
     char actual_ip[INET_ADDRSTRLEN];
     if (!get_ip_from_socket(sock, actual_ip, INET_ADDRSTRLEN)) {
         fprintf(stderr, "Failed to get socket IP\n");
-        strcpy(actual_ip, worker_ip); // Fallback zur übergebenen IP
+        strcpy(actual_ip, worker_ip); // Fallback to provided IP
     }
     printf("[Worker] Using IP address: %s (was: %s)\n", actual_ip, worker_ip);
 
-    // Send registration - GEÄNDERTE ZEILE:
+    // Send registration message with actual IP and port
     char registration[BUFFER_SIZE];
-    snprintf(registration, BUFFER_SIZE, "REGISTRATION:%s:%d", actual_ip, worker_port);  // actual_ip statt worker_ip
+    snprintf(registration, BUFFER_SIZE, "REGISTRATION:%s:%d", actual_ip, worker_port);
     send(sock, registration, strlen(registration) + 1, 0);
 
-    // Receive ID
+    // Receive assigned worker ID
     int worker_id;
     recv(sock, &worker_id, sizeof(int), 0);
 
-    // Receive neighbor info
+    // Receive neighbor information
     bool has_right_neighbor;
     recv(sock, &has_right_neighbor, sizeof(bool), 0);
 
@@ -248,6 +259,7 @@ WorkerConnection* connect_to_coordinator(const char* worker_ip, int worker_port,
     return conn;
 }
 
+// Frees the memory allocated for a CoordinatorResult structure and its members.
 void free_coordinator_result(CoordinatorResult* result) {
     if (result) {
         free(result->sockets);
@@ -256,6 +268,7 @@ void free_coordinator_result(CoordinatorResult* result) {
     }
 }
 
+// Frees the memory allocated for a WorkerConnection structure.
 void free_worker_connection(WorkerConnection* conn) {
     if (conn) {
         free(conn);

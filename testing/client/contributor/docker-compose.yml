@@ -1,3 +1,4 @@
+# Docker Compose file for setting up WireGuard, Curl, and Contributor services
 services:
   wireguard:
     image: jordanpotter/wireguard
