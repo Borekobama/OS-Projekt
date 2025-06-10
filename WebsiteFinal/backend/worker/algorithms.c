@@ -2,23 +2,26 @@
 #include "communicator.h"
 
 // Forward declarations for internal functions
-void quick_sort_recursive(int* arr, int low, int high);
-int partition(int* arr, int low, int high);
-void swap(int* a, int* b);
+void quick_sort_recursive(int* arr, int low, int high);   // Recursive helper for quicksort
+int partition(int* arr, int low, int high);               // Partition function for quicksort
+void swap(int* a, int* b);                                // Swaps two integer values
 
 // Sort context and helper functions
 typedef struct {
-    Communicator* comm;
-    int* local_data;
-    int length;
+    Communicator* comm;                                   // Pointer to communicator for process communication
+    int* local_data;                                      // Pointer to local data array
+    int length;                                           // Length of the local array
 } SortContext;
 
-bool execute_phase(SortContext* ctx, const char* phase);
-bool exchange_with_right(SortContext* ctx);
-bool receive_from_left(SortContext* ctx);
-void presort(int* data, int length);
+// Phase and exchange functions for the sorting algorithm
+bool execute_phase(SortContext* ctx, const char* phase);  // Executes a sorting phase (ODD/EVEN)
+bool exchange_with_right(SortContext* ctx);               // Exchange with right neighbor
+bool receive_from_left(SortContext* ctx);                 // Receive from left neighbor
+void presort(int* data, int length);                      // Local presort (e.g., quicksort)
 
 // Algorithm implementations
+// Each algorithm function takes a communicator, local data, and its length,
+// performs the operation, and returns the result if it's the root process.
 void* sum_algorithm(Communicator* comm, int* local_data, int length) {
     int local_sum = 0;
     for (int i = 0; i < length; i++) {
@@ -38,6 +41,7 @@ void* sum_algorithm(Communicator* comm, int* local_data, int length) {
     }
 }
 
+// Finds the minimum value in the local data and reduces it to the root process.
 void* min_algorithm(Communicator* comm, int* local_data, int length) {
     int local_min = local_data[0];
     for (int i = 1; i < length; i++) {
@@ -59,6 +63,7 @@ void* min_algorithm(Communicator* comm, int* local_data, int length) {
     }
 }
 
+// Finds the maximum value in the local data and reduces it to the root process.
 void* max_algorithm(Communicator* comm, int* local_data, int length) {
     int local_max = local_data[0];
     for (int i = 1; i < length; i++) {
@@ -80,6 +85,14 @@ void* max_algorithm(Communicator* comm, int* local_data, int length) {
     }
 }
 
+
+// Sorts the local data using a distributed odd-even transposition sort algorithm.
+// The algorithm consists of three phases:
+// 1. Synchronized presort: Each process sorts its local data.
+// 2. Odd-Even rounds: Processes exchange boundary elements with neighbors in alternating ODD and EVEN phases,
+//    performing swaps if necessary, until the global array is sorted.
+// 3. Gather: The root process collects all sorted chunks and merges them into the final sorted array.
+// Returns the sorted array on the root process, NULL on others.
 void* sort_algorithm(Communicator* comm, int* local_data, int length) {
     SortContext ctx = {comm, local_data, length};
 
@@ -189,6 +202,10 @@ void* sort_algorithm(Communicator* comm, int* local_data, int length) {
     }
 }
 
+// Executes a single ODD or EVEN phase of the distributed sort.
+// Determines if the current process is active (initiates exchange with right neighbor)
+// or passive (waits for left neighbor), or has no neighbor to exchange with.
+// Returns true if a swap occurred, false otherwise.
 bool execute_phase(SortContext* ctx, const char* phase) {
     bool is_odd_phase = (strcmp(phase, "ODD") == 0);
     bool is_active = (ctx->comm->rank % 2 == 1 && is_odd_phase) ||
@@ -209,6 +226,9 @@ bool execute_phase(SortContext* ctx, const char* phase) {
     }
 }
 
+// Exchanges the largest value of the local array with the right neighbor.
+// Sends the last element to the right, receives a value back, and swaps if necessary.
+// Returns true if a swap occurred, false otherwise.
 bool exchange_with_right(SortContext* ctx) {
     int my_value = ctx->local_data[ctx->length - 1];
     printf("[Rank %d] ACTIVE: Sending to right: %d\n", ctx->comm->rank, my_value);
@@ -236,6 +256,10 @@ bool exchange_with_right(SortContext* ctx) {
     return false;
 }
 
+// Receives a value from the left neighbor and decides whether to swap.
+// If the received value is greater than the local first value, a swap is performed
+// and the local value is sent back to the left neighbor. Otherwise, the received
+// value is sent back unchanged. Returns true if a swap occurred, false otherwise.
 bool receive_from_left(SortContext* ctx) {
     int received_value = receive_from_left_neighbor(ctx->comm);
     int my_value = ctx->local_data[0];
@@ -267,11 +291,12 @@ bool receive_from_left(SortContext* ctx) {
     }
 }
 
+// Presorts the local data using quicksort.
 void presort(int* data, int length) {
     quick_sort(data, length);
 }
 
-// Utility functions
+// Creates an array of the given length and fills it with random integers between 1 and 99.
 int* create_random_array(int length) {
     int* array = malloc(length * sizeof(int));
     srand(time(NULL));
@@ -281,6 +306,8 @@ int* create_random_array(int length) {
     return array;
 }
 
+// Calculates the chunk sizes for each process so that the elements are distributed as evenly as possible.
+// Returns an array containing the chunk sizes for each process.
 int* calculate_chunk_sizes(int array_length, int num_processes) {
     int* sizes = malloc(num_processes * sizeof(int));
     int base_size = array_length / num_processes;
@@ -296,10 +323,13 @@ int* calculate_chunk_sizes(int array_length, int num_processes) {
     return sizes;
 }
 
+// Sorts the array in place using the quicksort algorithm.
 void quick_sort(int* arr, int length) {
     quick_sort_recursive(arr, 0, length - 1);
 }
 
+// Recursive helper function for quicksort.
+// Sorts the subarray arr[low..high] in place.
 void quick_sort_recursive(int* arr, int low, int high) {
     if (low < high) {
         int pivot_index = partition(arr, low, high);
@@ -308,6 +338,7 @@ void quick_sort_recursive(int* arr, int low, int high) {
     }
 }
 
+// Partitions the array around a pivot selected using the median-of-three method.
 int partition(int* arr, int low, int high) {
     // Median-of-three pivot selection
     int mid = low + (high - low) / 2;
@@ -329,12 +360,15 @@ int partition(int* arr, int low, int high) {
     return i + 1;
 }
 
+// Swaps the values of two integers pointed to by a and b.
 void swap(int* a, int* b) {
     int temp = *a;
     *a = *b;
     *b = temp;
 }
 
+// Inserts the value at arr\[0\] into its correct position by shifting larger elements to the right.
+// Used after receiving a new value from the left neighbor in the distributed sort.
 void insert_from_left(int* arr, int length) {
     int i = 0;
     int temp = arr[i];
@@ -345,6 +379,8 @@ void insert_from_left(int* arr, int length) {
     arr[i] = temp;
 }
 
+// Inserts the value at arr[length - 1] into its correct position by shifting smaller elements to the left.
+// Used after receiving a new value from the right neighbor in the distributed sort.
 void insert_from_right(int* arr, int length) {
     int i = length - 1;
     int temp = arr[i];
@@ -355,7 +391,7 @@ void insert_from_right(int* arr, int length) {
     arr[i] = temp;
 }
 
-// Validation functions
+// Checks if the calculated sum matches the sum of all elements in the original array.
 bool validate_sum(int calculated_sum, int* original_array, int length) {
     int expected_sum = 0;
     for (int i = 0; i < length; i++) {
@@ -364,6 +400,7 @@ bool validate_sum(int calculated_sum, int* original_array, int length) {
     return calculated_sum == expected_sum;
 }
 
+// Validates whether the calculated minimum matches the minimum value in the original array.
 bool validate_min(int calculated_min, int* original_array, int length) {
     int expected_min = original_array[0];
     for (int i = 1; i < length; i++) {
@@ -374,6 +411,7 @@ bool validate_min(int calculated_min, int* original_array, int length) {
     return calculated_min == expected_min;
 }
 
+// Validates whether the calculated maximum matches the maximum value in the original array.
 bool validate_max(int calculated_max, int* original_array, int length) {
     int expected_max = original_array[0];
     for (int i = 1; i < length; i++) {
@@ -384,6 +422,8 @@ bool validate_max(int calculated_max, int* original_array, int length) {
     return calculated_max == expected_max;
 }
 
+// Checks if the given array is sorted in non-decreasing order.
+// Returns true if sorted, false otherwise.
 bool is_sorted(int* array, int length) {
     for (int i = 0; i < length - 1; i++) {
         if (array[i] > array[i + 1]) {

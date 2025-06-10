@@ -1,3 +1,4 @@
+# Docker Compose file for setting up WireGuard, Curl, and Contributor services
 services:
   wireguard:
     image: jordanpotter/wireguard
@@ -17,8 +18,8 @@ services:
     depends_on:
       - wireguard
 
-  worker:
-    container_name: worker
+  contributor:
+    container_name: contributor
     build:
       context: .
       dockerfile: Dockerfile.worker
@@ -27,4 +28,7 @@ services:
       - wireguard
     environment:
       - COORDINATOR_IP=10.8.0.3
-    command: [ "./main", "w", "10.8.0.3"]
+    tty: true
+    stdin_open: true
+    entrypoint: [ ]
+    command: [ "./main", "c" ]

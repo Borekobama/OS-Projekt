@@ -3,12 +3,12 @@
 
 #include "common.h"
 
-// Communicator creation and destruction
-Communicator* create_coordinator_communicator(int rank, int* worker_sockets, 
-                                            int worker_count, WorkerInfo* first_worker);
+// Functions for creating and destroying communicators
+Communicator* create_coordinator_communicator(int rank, int* worker_sockets,
+                                             int worker_count, WorkerInfo* first_worker);
 Communicator* create_worker_communicator(int rank, int coordinator_socket,
-                                       const char* own_ip, int own_port,
-                                       const char* right_neighbor_ip, int right_neighbor_port);
+                                         const char* own_ip, int own_port,
+                                         const char* right_neighbor_ip, int right_neighbor_port);
 void free_communicator(Communicator* comm);
 
 // Star topology communication operations

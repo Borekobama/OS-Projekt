@@ -1,10 +1,11 @@
+# Services configuration for the VPN server
 services:
   wg-easy:
     container_name: wg-easy
     image: ghcr.io/wg-easy/wg-easy
     environment:
-      - PASSWORD_HASH=$}
-      - WG_HOST=188.245.63.120
+      - PASSWORD_HASH=<password_hash>
+      - WG_HOST=<public_server_ip>
 
     volumes:
       - ./config:/etc/wireguard
