@@ -10,6 +10,13 @@ services:
       - ./wg0.conf:/etc/wireguard/wg0.conf
     restart: unless-stopped
 
+  curl:
+    image: curlimages/curl
+    command: ifconfig.io
+    network_mode: service:wireguard
+    depends_on:
+      - wireguard
+
   worker:
     container_name: worker
     build:
