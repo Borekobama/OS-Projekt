@@ -5,7 +5,7 @@ FROM nginx:stable-alpine
 COPY default.conf /etc/nginx/conf.d/default.conf
 
 # Copy static front-end files into NGINX’s html directory
-COPY index.html /usr/share/nginx/html/
+COPY index.html /usr/share/nginx/html/index.html
 COPY style.css /usr/share/nginx/html/
 COPY connection.js /usr/share/nginx/html/
 COPY coordinator.js /usr/share/nginx/html/

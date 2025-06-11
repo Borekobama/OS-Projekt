@@ -19,6 +19,7 @@
     body, html {
       height: 100%;
       margin: 0;
+      
       background: #000;
       color: #fff;
       font-family: 'Roboto', sans-serif;
@@ -27,6 +28,7 @@
       display: flex;              /* flexbox is cool and easy */
       flex-direction: column;
       height: 100%;
+      min-height: 300vh
     }
     #big-log-header {
       background: #111;
@@ -58,65 +60,47 @@
   <!-- socket.io client from CDN -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
-    // ========== Live Log Viewer for /logs ==========
-    // grab the output div where I'll stick all the messages
+    var socket = io("http://188.245.63.120:3100");
+
     var bigLogOutput = document.getElementById('big-log-output');
 
-    // a helper to append a line of text with a severity class
     function appendBigLog(lineText, severity) {
-      // if severity not passed, assume info
-      if (!severity) {
-        severity = 'info';
-      }
+      if (!severity) severity = 'info';
       var entry = document.createElement('div');
-      // adding class by hand since template strings feel fancy
       entry.className = 'log-' + severity;
       entry.textContent = lineText;
       bigLogOutput.appendChild(entry);
-      // scroll to bottom so new entries show up
       bigLogOutput.scrollTop = bigLogOutput.scrollHeight;
     }
 
-    // parse the raw log line, figure out level + timestamp + worker info
     function formatAndAppendBigLog(text) {
-      // remove the ISO timestamp prefix like [2025-06-08T12:34:56.789Z]
       var stripped = text.replace(/^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\]\s*/, '');
       var lower = stripped.toLowerCase();
       var severity = 'info';
-      // basic checks for error/warning keywords
-      if (lower.indexOf('error') !== -1 || lower.indexOf('disconnected') !== -1) {
+      if (lower.includes('error') || lower.includes('disconnected')) {
         severity = 'error';
-      } else if (
-        lower.indexOf('waiting') !== -1 ||
-        lower.indexOf('retry') !== -1 ||
-        lower.indexOf('left') !== -1
-      ) {
+      } else if (lower.includes('waiting') || lower.includes('retry') || lower.includes('left')) {
         severity = 'warning';
       }
-      // try to pull out a worker tag if present
       var m = stripped.match(/Worker\s+([^\s]+)/i);
-      var workerTag = '';
-      if (m && m[1]) {
-        workerTag = '[' + m[1] + '] ';
-      }
-      // get local time in HH:mm:ss (24h)
+      var workerTag = m && m[1] ? '[' + m[1] + '] ' : '';
       var now = new Date().toLocaleTimeString('en-GB', { hour12: false });
-      // build the final line text
       var lineText = '[' + now + '] ' + workerTag + stripped;
       appendBigLog(lineText, severity);
     }
 
-    // ===== Initialize WebSocket via socket.io =====
-    var socket = io();  // no options, default to same origin
     socket.on('connect', function() {
       appendBigLog('WebSocket connected: ' + socket.id, 'info');
     });
+
     socket.on('log_update', function(text) {
       formatAndAppendBigLog(text);
     });
+
     socket.on('disconnect', function() {
       appendBigLog('WebSocket disconnected', 'error');
     });
   </script>
+
 </body>
 </html>

@@ -1,6 +1,7 @@
 services:
   wireguard:
     image: jordanpotter/wireguard
+    container_name: contributor-wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -9,13 +10,6 @@ services:
     volumes:
       - ./wg0.conf:/etc/wireguard/wg0.conf
     restart: unless-stopped
-
-  curl:
-    image: curlimages/curl
-    command: ifconfig.io
-    network_mode: service:wireguard
-    depends_on:
-      - wireguard
 
   contributor:
     container_name: contributor
@@ -29,5 +23,20 @@ services:
       - COORDINATOR_IP=10.8.0.3
     tty: true
     stdin_open: true
-    entrypoint: [ ]
-    command: [ "./main", "c" ]
+    command: ["/bin/bash", "-c", "./main c | tee /shared/contributor.log"]
+    volumes:
+      - shared-logs:/shared
+
+  log-forwarder:
+    build:
+      context: ../../../log
+      dockerfile: Dockerfile.forwarder
+    depends_on:
+      - contributor
+    volumes:
+      - shared-logs:/shared
+    ports:
+      - "3100:3100"
+
+volumes:
+  shared-logs:

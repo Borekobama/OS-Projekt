@@ -61,23 +61,58 @@ window.addEventListener('load', function() {
     btn.addEventListener('click', function() {
       opButtons.forEach(b => b.classList.remove('active'));
       this.classList.add('active');
-      selectedOperation = this.dataset.op;
+      selectedOperation = this.dataset.op; // ← richtig
       appendLog('Selected operation: ' + selectedOperation, 'info');
     });
   });
 
   // Generate random array
   generateArrayBtn.addEventListener('click', function() {
+    generateArrayBtn.disabled = true;
+
     var len = parseInt(arrayLengthInput.value, 10);
     if (!len || len <= 0) {
       alert('Please enter a positive array length.');
+      generateArrayBtn.disabled = false;
       return;
     }
-    currentArray = [];
-    for (var i = 0; i < len; i++) {
-      currentArray.push(Math.floor(Math.random() * 1000));
+
+    var customText = customArrayInput.value.trim();
+    var payload;
+
+    if (customText) {
+      try {
+        var parsed = JSON.parse(customText);
+        if (!Array.isArray(parsed)) throw new Error();
+        payload = { customArray: parsed };
+      } catch (e) {
+        alert('Invalid custom array. Use format: [1,2,3]');
+        generateArrayBtn.disabled = false;
+        return;
+      }
+    } else {
+      payload = { length: len };
     }
-    appendLog('Random array generated: [' + currentArray.join(', ') + ']', 'info');
+
+    appendLog('Requesting array generation…', 'info');
+    fetch('/generate-array', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(resp => {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.json();
+    })
+    .then(data => {
+      appendLog('Array ready on coordinator.', 'info');
+    })
+    .catch(err => {
+      appendLog('Generate array error: ' + err.message, 'error');
+    })
+    .finally(() => {
+      generateArrayBtn.disabled = false;
+    });
   });
 
   // Distribute array (star topology)
@@ -122,33 +157,34 @@ window.addEventListener('load', function() {
   // Start operation (chain for SORT)
   startOperationBtn.addEventListener('click', function() {
     if (!selectedOperation) {
-      alert('Select an operation first.');
+      alert('Please select an operation.');
       return;
     }
-    topologyMode = (selectedOperation === 'SORT') ? 'chain' : 'star';
-    drawConnections();
 
-    appendLog('Starting operation ' + selectedOperation + '…', 'info');
+    startOperationBtn.disabled = true;
+
+    appendLog('Starting operation: ' + selectedOperation, 'info');
     fetch('/start-operation', {
       method: 'POST',
       headers: { 'Content-Type':'application/json' },
       body: JSON.stringify({ operation: selectedOperation })
     })
-    .then(function(resp) {
+    .then(resp => {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       return resp.json();
     })
-    .then(function(data) {
+    .then(data => {
       if (data.error) {
-        appendLog('Error: ' + data.error, 'error');
-      } else if (data.result !== undefined) {
-        appendLog('Result: ' + JSON.stringify(data.result), 'info');
-      } else if (data.message) {
-        appendLog(data.message, 'info');
+        appendLog('Operation error: ' + data.error, 'error');
+      } else {
+        appendLog('Operation started successfully.', 'info');
       }
     })
-    .catch(function(err) {
-      appendLog('Start error: ' + err.message, 'error');
+    .catch(err => {
+      appendLog('Start operation failed: ' + err.message, 'error');
+    })
+    .finally(() => {
+      startOperationBtn.disabled = false;
     });
   });
 
@@ -192,6 +228,47 @@ function initializeWebSocket() {
 
 function initializeSocketHandlers() {
   if (!socket) return;
+  socket.on('initial_snapshot', function(data) {
+    workers = data.workers || [];
+    currentCoordinatorId = data.coordinatorId || null;
+    renderAllWorkers();
+    positionWorkers();
+    drawConnections();
+  });
+  socket.on('worker_added', function(data) {
+    workers.push({
+      id: data.id,
+      name: data.name,
+      status: data.status,
+      createdAt: new Date(data.createdAt),
+      angle: 0
+    });
+    renderWorkerNode(data.id);
+    renderControlRow(data.id);
+    populateCoordinatorDropdown();
+    positionWorkers();
+    drawConnections();
+  });
+  socket.on('worker_updated', function(data) {
+    var w = workers.find(x => x.id === data.id);
+    if (w) {
+      w.status = data.status;
+      updateWorkerLine(data.id);
+    }
+  });
+  socket.on('worker_removed', function(data) {
+    removeWorker(data.id);
+    if (data.coordinatorId !== undefined) {
+      currentCoordinatorId = data.coordinatorId;
+      positionWorkers();
+      drawConnections();
+    }
+  });
+  socket.on('coordinator_switched', function(data) {
+    currentCoordinatorId = data.newCoordinatorId;
+    positionWorkers();
+    drawConnections();
+  });
   socket.on('log-update', handleLogUpdate);
   socket.on('sort-complete', handleSortComplete);
   socket.on('sort-error', handleSortError);
@@ -300,6 +377,7 @@ function renderAllWorkers() {
 }
 
 function renderWorkerNode(id) {
+  console.log('[renderWorkerNode] called for:', id);
   if (document.querySelector('.worker-node[data-id="' + id + '"]')) return;
   var w = workers.find(function(x) { return x.id === id; });
   if (!w) return;
@@ -426,4 +504,22 @@ function appendLog(text, severity) {
   div.textContent = text;
   logOutput.appendChild(div);
   logOutput.scrollTop = logOutput.scrollHeight;
+}
+
+function sendClusterCommand(cmd) {
+  fetch('http://188.245.63.120:8081/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'cmd=' + encodeURIComponent(cmd)
+  })
+  .then(res => {
+    if (!res.ok) throw new Error('Network error');
+    return res.text();
+  })
+  .then(text => {
+    appendLog('Command "' + cmd + '" sent successfully.', 'info');
+  })
+  .catch(err => {
+    appendLog('Failed to send command: ' + err.message, 'error');
+  });
 }

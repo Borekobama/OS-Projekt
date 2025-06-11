@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y \
     iputils-ping \
     net-tools \
     dnsutils \
+    libcurl4-openssl-dev \
+    wireguard-tools \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -13,6 +15,6 @@ WORKDIR /app
 COPY *.c ./
 COPY *.h ./
 
-RUN gcc -o main main.c network.c communicator.c algorithms.c -lpthread -Wall -O2
+RUN gcc -o main main.c network.c communicator.c algorithms.c -lpthread -lcurl -Wall -O2
 
 EXPOSE 8080-9081

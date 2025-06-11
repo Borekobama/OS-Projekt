@@ -6,7 +6,7 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - docker-net
+      - cluster-net
 
   backend:
     build:
@@ -14,15 +14,15 @@ services:
       dockerfile: Dockerfile
     container_name: backend_upstream
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    ports:
-      - "3000:3000"
     depends_on:
       - redis
     networks:
-      - docker-net
+      - cluster-net
 
   frontend:
     build:
@@ -30,13 +30,13 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     restart: unless-stopped
-    depends_on:
-      - backend
     ports:
       - "80:80"
+    depends_on:
+      - backend
     networks:
-      - docker-net
+      - cluster-net
 
 networks:
-  docker-net:
+  cluster-net:
     driver: bridge

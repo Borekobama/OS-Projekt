@@ -107,7 +107,15 @@ io.on('connection', function(socket) {
 
   socket.on('disconnect', function() {
     addLog('Client disconnected (' + socket.id + ')', io);
+    Object.keys(workers).forEach(id => {
+      if (workers[id].socketId === socket.id) {
+        delete workers[id];
+        io.emit('worker_removed', { id });
+      }
+    });
   });
+
+  socket.emit('worker-update', workers);
 });
 
 // ─── HTTP Endpoints ──────────────────────────────────────────────────────────
@@ -262,7 +270,27 @@ app.post('/sort', async function(req, res) {
   }
 });
 
-// 7) Spawn real worker container
+// 7) POST generate array upon request
+app.post('/generate-array', function(req, res) {
+  const fs = require('fs');
+  const arrayFile = '/tmp/cluster_array.json';
+
+  if (req.body.customArray && Array.isArray(req.body.customArray)) {
+    fs.writeFileSync(arrayFile, JSON.stringify(req.body.customArray));
+    return res.json({ success: true, message: 'Custom array written' });
+  }
+
+  const len = parseInt(req.body.length);
+  if (!len || len <= 0) {
+    return res.status(400).json({ error: 'Invalid length' });
+  }
+
+  const arr = Array.from({length: len}, () => Math.floor(Math.random() * 1000));
+  fs.writeFileSync(arrayFile, JSON.stringify(arr));
+  return res.json({ success: true, message: 'Random array written' });
+});
+
+// 8) Spawn real worker container
 app.post('/spawn-worker', function(req, res) {
   var name = req.body.name;
   if (!name || name.trim() === '') {
